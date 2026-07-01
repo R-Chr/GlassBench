@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "glassbench"
+version = "0.1.0"
+description = "DFT benchmark of MLIPs on glass structure properties"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "R-Chr", email = "r.chr.lab@gmail.com" }]
+
+dependencies = [
+    "atomate2",
+    "jobflow",
+    "monty",
+    "numpy",
+    "scipy",
+    "pyyaml",
+    "vitrum",
+]
+
+[project.optional-dependencies]
+grace-fs = ["pyace"]
+grace = ["tensorpotential"]
+mace = ["mace-torch"]
+all = ["glassbench[grace-fs,grace,mace]"]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+glassbench = "glassbench.runners:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/glassbench"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
+[tool.hatch.build.targets.sdist]
+include = ["src/glassbench/data/*.json"]
+
+[tool.ruff]
+line-length = 100

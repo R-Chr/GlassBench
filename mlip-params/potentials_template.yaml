@@ -1,0 +1,36 @@
+# potentials.yaml — place this file in the directory pointed to by MLIP_PARAMS_DIR.
+#
+# Each top-level key is a potential name used with --potential or potential_name=.
+# Paths under "cpu" and "gpu" are relative to MLIP_PARAMS_DIR, or absolute.
+#
+# Supported model_type values:
+#   mace      requires: pip install glassbench[mace]
+#   grace-fs  requires: pip install glassbench[grace-fs]
+#   grace     requires: pip install glassbench[grace]
+
+# --- MACE ---------------------------------------------------------------
+
+MACE_example:
+  model_type: mace
+  functional: r2scan   # informational, used for property-based lookup
+  size: medium         # informational, used for property-based lookup
+  cpu: MACE_example.model
+  # gpu: MACE_example.model   # omit if no GPU variant
+
+# --- GRACE-FS -----------------------------------------------------------
+
+GRACE_FS_example:
+  model_type: grace-fs
+  functional: pbe
+  size: large
+  cpu: grace_fs_large.yaml
+  gpu: grace_fs_large_gpu      # directory or file name, backend-dependent
+
+# --- GRACE (tensorpotential) --------------------------------------------
+
+GRACE_example:
+  model_type: grace
+  functional: r2scan
+  size: medium
+  cpu: grace_r2scan             # directory containing the model
+  gpu: grace_r2scan
