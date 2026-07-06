@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 from scipy.stats import wasserstein_distance
-from vitrum.scattering import scattering
+from vitrum import Scattering
 
 
 def phonon_error(dft_output: dict, mlip_output: Any) -> dict:
@@ -108,7 +108,7 @@ def md_error(dft_doc: dict, mlip_output: Any) -> dict:
 
     def _compute_rdf(trajectory):
         """Partial PDFs for a trajectory, built the same way as the DFT reference."""
-        scatter = scattering(trajectory)
+        scatter = Scattering(trajectory)
         r = np.array([float(x) for x in scatter.xval])
         pdfs = {
             "-".join(str(p) for p in pair): np.array([float(v) for v in pdf])
