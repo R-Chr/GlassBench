@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Any, Callable
+from functools import cache
+from typing import Any
 
 import yaml
 from atomate2.forcefields.jobs import ForceFieldRelaxMaker, ForceFieldStaticMaker
@@ -17,7 +18,7 @@ def get_mlip_params_path():
     """Helper to resolve the parameters directory."""
     env_path = os.environ.get("MLIP_PARAMS_DIR")
     if not env_path:
-        raise EnvironmentError(
+        raise OSError(
             "MLIP_PARAMS_DIR environment variable is not set. "
             "Point it at the directory containing potentials.yaml."
         )
@@ -100,7 +101,7 @@ def _build_mace(model_path, **kwargs):
     from mace.calculators import MACECalculator
     return MACECalculator(model_paths=model_path, **kwargs)
 
-@lru_cache(maxsize=None)
+@cache
 def _cached_calculator(model_path, model_type, builder_kwargs_items):
     logger.info("Loading %s calculator from %s", model_type, model_path)
     builder = _CALCULATOR_BUILDERS[model_type]

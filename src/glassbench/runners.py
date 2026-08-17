@@ -112,11 +112,17 @@ def run_tests(
     fresh: bool = False,
     verbose: bool = False,
     calculator: Any = None,
+    architecture: str = "cpu",
+    device: str | None = None,
 ):
     if calculator is None and potential_name is None:
         raise ValueError("Provide either potential_name or calculator.")
 
-    potential_kwargs = {"potential_name": potential_name} if calculator is None else None
+    potential_kwargs = None
+    if calculator is None:
+        potential_kwargs = {"potential_name": potential_name, "architecture": architecture}
+        if device:
+            potential_kwargs["builder_kwargs"] = {"device": device}
     run_label = potential_name or "custom"
     benchmark_results = defaultdict(dict)
 
@@ -247,6 +253,8 @@ def main():
     parser.add_argument("--no-phonons", action="store_true", help="Skip phonon benchmark")
     parser.add_argument("--no-elastic", action="store_true", help="Skip elastic benchmark")
     parser.add_argument("--no-md", action="store_true", help="Skip MD/RDF benchmark")
+    parser.add_argument("--architecture", default="cpu", help="Which model file to load from potentials.yaml (cpu/gpu)")
+    parser.add_argument("--device", default=None, help="Torch device passed to the calculator, e.g. cuda")
     parser.add_argument("--fresh", action="store_true", help="Ignore existing checkpoints and start from scratch")
     parser.add_argument("--verbose", action="store_true", help="Show full jobflow job-level output")
     args = parser.parse_args()
@@ -269,6 +277,8 @@ def main():
         md=not args.no_md,
         fresh=args.fresh,
         verbose=args.verbose,
+        architecture=args.architecture,
+        device=args.device,
     )
 
 
