@@ -19,6 +19,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _failed(result) -> bool:
+    """Failed runs are stored as the error message (None in older checkpoints)."""
+    return result is None or isinstance(result, str)
+
+
 def _load_checkpoint(path: Path) -> dict:
     if not path.exists():
         return {}
@@ -42,7 +47,8 @@ def _run_workflow(
 ) -> dict:
     results_dict = _load_checkpoint(checkpoint_file) if checkpoint_file is not None else {}
 
-    pending = [s for s in structures if s.composition.reduced_formula not in results_dict]
+    # retry failures; only successful runs count as done
+    pending = [s for s in structures if _failed(results_dict.get(s.composition.reduced_formula))]
     n_total = len(structures)
     n_done = n_total - len(pending)
 
@@ -60,8 +66,9 @@ def _run_workflow(
             elif make_fn is make_MD_mlip:
                 results_dict[formula] = response[workflow.uuid][1].output
         except Exception as exc:
-            logger.warning("FAILED %s: %s", formula, exc)
-            results_dict[formula] = None
+            msg = f"{type(exc).__name__}: {exc}"
+            logger.warning("FAILED %s: %s", formula, msg, exc_info=verbose)
+            results_dict[formula] = msg  # failure sentinel, see _failed()
 
         if checkpoint_file is not None:
             _save_checkpoint(checkpoint_file, results_dict)
@@ -134,11 +141,11 @@ def run_tests(
                                       checkpoint_file=out / "elastic_benchmark.json",
                                       verbose=verbose, calculator=calculator)
 
-        n_ok = sum(v is not None for v in elastic_results.values())
+        n_ok = sum(not _failed(v) for v in elastic_results.values())
         logger.info("Elastic done: %d/%d succeeded", n_ok, len(elastic_results))
         for formula, mlip_result in elastic_results.items():
-            if mlip_result is None:
-                benchmark_results[formula]["elastic_error"] = None
+            if _failed(mlip_result):
+                benchmark_results[formula]["elastic_error"] = mlip_result
                 continue
             dft_result = elastic_docs[f"Bench-elastic-glass {formula}"]
             benchmark_results[formula]["elastic_error"] = elastic_error(
@@ -155,11 +162,11 @@ def run_tests(
                                      checkpoint_file=out / "phonon_benchmark.json",
                                      verbose=verbose, calculator=calculator)
 
-        n_ok = sum(v is not None for v in phonon_results.values())
+        n_ok = sum(not _failed(v) for v in phonon_results.values())
         logger.info("Phonon done: %d/%d succeeded", n_ok, len(phonon_results))
         for formula, mlip_result in phonon_results.items():
-            if mlip_result is None:
-                benchmark_results[formula]["phonon_error"] = None
+            if _failed(mlip_result):
+                benchmark_results[formula]["phonon_error"] = mlip_result
                 continue
             benchmark_results[formula]["phonon_error"] = phonon_error(phonon_docs[formula], mlip_result)
 
@@ -175,11 +182,11 @@ def run_tests(
                             checkpoint_file=out / "md_benchmark.json",
                             verbose=verbose, calculator=calculator)
 
-        n_ok = sum(v is not None for v in md_results.values())
+        n_ok = sum(not _failed(v) for v in md_results.values())
         logger.info("MD done: %d/%d succeeded", n_ok, len(md_results))
         for formula, mlip_result in md_results.items():
-            if mlip_result is None:
-                benchmark_results[formula]["md_error"] = None
+            if _failed(mlip_result):
+                benchmark_results[formula]["md_error"] = mlip_result
                 continue
             dft_doc = dft_by_formula.get(formula)
             if dft_doc is None:
@@ -212,8 +219,9 @@ def _log_summary(benchmark_results: dict) -> None:
         logger.info("%s  (%s)", title, unit)
         values = []
         for formula, result in rows.items():
-            if result is None:
-                logger.info("  %-*s  FAILED", col, formula)
+            if _failed(result):
+                reason = (result or "unknown error").splitlines()[0][:100]
+                logger.info("  %-*s  FAILED  %s", col, formula, reason)
             else:
                 v = metric_fn(result)
                 logger.info("  %-*s  %.4f", col, formula, v)
