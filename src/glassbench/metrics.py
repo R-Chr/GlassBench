@@ -122,7 +122,9 @@ def md_error(dft_doc: dict, mlip_output: Any) -> dict:
             return pdfs[pair]
         return pdfs.get("-".join(reversed(pair.split("-"))))
 
-    structures = [getattr(s, "structure", s) for s in getattr(getattr(mlip_output, "output", mlip_output), "ionic_steps", None)]
+    ionic_steps = getattr(getattr(mlip_output, "output", mlip_output), "ionic_steps", None)
+    # Scattering wants ASE Atoms; ionic steps carry pymatgen Structures
+    structures = [getattr(s, "structure", s).to_ase_atoms() for s in ionic_steps]
 
     r_mlip, pdf_mlip = _compute_rdf(structures)
     r_dft = np.asarray(dft_doc["r"])
